@@ -19,6 +19,21 @@ enum OpCode {
     HALT = 0b0000,
 }
 
+impl OpCode {
+    // Helper function for execute cycle
+    pub fn u8_to_opcode(value: u8) -> Option<OpCode> {
+        match value {
+            0b0000 => Some(OpCode::HALT),
+            0b0001 => Some(OpCode::LOAD),
+            0b0010 => Some(OpCode::STORE),
+            0b0011 => Some(OpCode::ADD),
+            0b0100 => Some(OpCode::SUB),
+            0b0101 => Some(OpCode::JMP),
+            _ => None,
+        }
+    }
+}
+
 impl CPU {
     // Initialize a new CPU with program
     pub fn new(program: &[u16]) -> CPU {
@@ -57,15 +72,46 @@ impl CPU {
         (opcode, register, operand)
     }
 
-    pub fn execute(&mut self, opcode: u8, register: u8, operand: u8) {}
+    pub fn execute(&mut self, opcode: u8, register: u8, operand: u8) {
+        use OpCode::*;
+
+        match OpCode::u8_to_opcode(opcode) {
+            // SOME and NONE
+            // NOTE: https://stackoverflow.com/questions/24771655/what-are-some-and-none
+            Some(HALT) => {
+                self.halted = true;
+            }
+            Some(LOAD) => {}
+
+            Some(STORE) => {}
+
+            Some(ADD) => {}
+
+            Some(SUB) => {}
+
+            Some(JMP) => {}
+            None => {
+                panic!("Unknown opcode {:#04b}", opcode)
+            }
+        }
+    }
+
     pub fn print() {}
 }
 
 fn main() {
-    // while !cpu.halted {
-    //     cpu.fetch();
-    //     cpu.decode();
-    //     cpu.execute();
-    //     cpu.print();
-    // }
+    let program = [];
+
+    let mut cpu = CPU::new(&program);
+
+    while !cpu.halted {
+        cpu.fetch();
+        let (opcode, register, operand) = cpu.decode();
+        cpu.execute(opcode, register, operand);
+
+        // Print values of the registers after each cycle
+        // cpu.print();
+    }
+
+    println!("CPU halted");
 }
