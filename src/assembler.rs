@@ -35,6 +35,8 @@ fn main() {
 
             for line in lines {
                 let first_char = line.chars().next().unwrap_or(';');
+
+                // Ignore lines that starts with ; (comments)
                 if first_char == ';' || first_char == '\n' {
                     continue;
                 }
@@ -83,7 +85,40 @@ fn main() {
                             .write(binary_instructions.to_be_bytes().as_slice())
                             .unwrap();
                     }
-                    "LOAD" => {}
+                    "LOAD" => {
+                        let (_, args) = line.split_once(char::is_whitespace).unwrap();
+                        let (arg1, arg2) = args.split_once(", ").unwrap();
+                        let mut binary_instructions = (OpCode::LVAL as u16) << 12;
+
+                        match arg1 {
+                            "R0" => {
+                                binary_instructions =
+                                    binary_instructions | (Register::R0 as u16) << 8;
+                            }
+                            "R1" => {
+                                binary_instructions =
+                                    binary_instructions | (Register::R1 as u16) << 8;
+                            }
+                            "R2" => {
+                                binary_instructions =
+                                    binary_instructions | (Register::R2 as u16) << 8;
+                            }
+                            "R3" => {
+                                binary_instructions =
+                                    binary_instructions | (Register::R3 as u16) << 8;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        binary_instructions =
+                            binary_instructions | arg2.to_string().parse::<u16>().unwrap();
+
+                        output_file
+                            .write(binary_instructions.to_be_bytes().as_slice())
+                            .unwrap();
+                    }
                     "STORE" => {}
                     "ADD" => {}
                     "SUB" => {}
