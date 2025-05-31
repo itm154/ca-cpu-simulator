@@ -1,3 +1,5 @@
+use std::fs;
+
 pub struct CPU {
     r0: u16,           // General purpose register
     r1: u16,           // following RISC naming convention (R[n])
@@ -160,7 +162,13 @@ impl CPU {
 }
 
 fn main() {
-    let program: Vec<u16> = vec![];
+    let program_bin = fs::read("program.bin").unwrap();
+
+    let mut program: Vec<u16> = Vec::new();
+
+    for chunk in program_bin.chunks_exact(2) {
+        program.push(u16::from_le_bytes([chunk[1], chunk[0]]));
+    }
 
     let mut cpu = CPU::new(&program);
 
