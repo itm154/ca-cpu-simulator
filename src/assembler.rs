@@ -40,7 +40,14 @@ fn main() {
                     continue;
                 }
 
-                let (instruction, _) = line.split_once(char::is_whitespace).unwrap();
+                // HALT does not contain any argument
+                let trimmed_line = line.trim();
+                let (instruction, _) = match trimmed_line.find(char::is_whitespace) {
+                    Some(i) => trimmed_line.split_at(i),
+                    None => (trimmed_line, ""),
+                };
+
+                let instruction = instruction.trim();
 
                 match instruction {
                     "HALT" => {
