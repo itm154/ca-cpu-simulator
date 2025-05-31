@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 
@@ -36,7 +35,7 @@ fn main() {
             for line in lines {
                 let first_char = line.chars().next().unwrap_or(';');
 
-                // Ignore lines that starts with ; (comments)
+                // Ignore lines that starts with ; (comments) and blank lines
                 if first_char == ';' || first_char == '\n' {
                     continue;
                 }
@@ -58,28 +57,23 @@ fn main() {
 
                         match arg1 {
                             "R0" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R0 as u16) << 8;
+                                binary_instructions |= (Register::R0 as u16) << 8;
                             }
                             "R1" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R1 as u16) << 8;
+                                binary_instructions |= (Register::R1 as u16) << 8;
                             }
                             "R2" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R2 as u16) << 8;
+                                binary_instructions |= (Register::R2 as u16) << 8;
                             }
                             "R3" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R3 as u16) << 8;
+                                binary_instructions |= (Register::R3 as u16) << 8;
                             }
                             _ => {
                                 panic!("Unknown register {arg1}")
                             }
                         }
 
-                        binary_instructions =
-                            binary_instructions | arg2.to_string().parse::<u16>().unwrap();
+                        binary_instructions |= arg2.to_string().parse::<u16>().unwrap();
 
                         output_file
                             .write(binary_instructions.to_be_bytes().as_slice())
@@ -88,44 +82,207 @@ fn main() {
                     "LOAD" => {
                         let (_, args) = line.split_once(char::is_whitespace).unwrap();
                         let (arg1, arg2) = args.split_once(", ").unwrap();
-                        let mut binary_instructions = (OpCode::LVAL as u16) << 12;
+                        let mut binary_instructions = (OpCode::LOAD as u16) << 12;
 
                         match arg1 {
                             "R0" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R0 as u16) << 8;
+                                binary_instructions |= (Register::R0 as u16) << 8;
                             }
                             "R1" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R1 as u16) << 8;
+                                binary_instructions |= (Register::R1 as u16) << 8;
                             }
                             "R2" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R2 as u16) << 8;
+                                binary_instructions |= (Register::R2 as u16) << 8;
                             }
                             "R3" => {
-                                binary_instructions =
-                                    binary_instructions | (Register::R3 as u16) << 8;
+                                binary_instructions |= (Register::R3 as u16) << 8;
                             }
                             _ => {
                                 panic!("Unknown register {arg1}")
                             }
                         }
 
-                        binary_instructions =
-                            binary_instructions | arg2.to_string().parse::<u16>().unwrap();
+                        binary_instructions |= arg2.to_string().parse::<u16>().unwrap();
 
                         output_file
                             .write(binary_instructions.to_be_bytes().as_slice())
                             .unwrap();
                     }
-                    "STORE" => {}
-                    "ADD" => {}
-                    "SUB" => {}
-                    "JMP" => {}
-                    "MOV" => {}
+                    "STORE" => {
+                        let (_, args) = line.split_once(char::is_whitespace).unwrap();
+                        let (arg1, arg2) = args.split_once(", ").unwrap();
+                        let mut binary_instructions = (OpCode::STORE as u16) << 12;
+
+                        match arg1 {
+                            "R0" => {
+                                binary_instructions |= (Register::R0 as u16) << 8;
+                            }
+                            "R1" => {
+                                binary_instructions |= (Register::R1 as u16) << 8;
+                            }
+                            "R2" => {
+                                binary_instructions |= (Register::R2 as u16) << 8;
+                            }
+                            "R3" => {
+                                binary_instructions |= (Register::R3 as u16) << 8;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        binary_instructions |= arg2.to_string().parse::<u16>().unwrap();
+
+                        output_file
+                            .write(binary_instructions.to_be_bytes().as_slice())
+                            .unwrap();
+                    }
+                    "ADD" => {
+                        let (_, args) = line.split_once(char::is_whitespace).unwrap();
+                        let (arg1, arg2) = args.split_once(", ").unwrap();
+                        let mut binary_instructions = (OpCode::ADD as u16) << 12;
+
+                        match arg1 {
+                            "R0" => {
+                                binary_instructions |= (Register::R0 as u16) << 8;
+                            }
+                            "R1" => {
+                                binary_instructions |= (Register::R1 as u16) << 8;
+                            }
+                            "R2" => {
+                                binary_instructions |= (Register::R2 as u16) << 8;
+                            }
+                            "R3" => {
+                                binary_instructions |= (Register::R3 as u16) << 8;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        match arg2 {
+                            "R0" => {
+                                binary_instructions |= Register::R0 as u16;
+                            }
+                            "R1" => {
+                                binary_instructions |= Register::R1 as u16;
+                            }
+                            "R2" => {
+                                binary_instructions |= Register::R2 as u16;
+                            }
+                            "R3" => {
+                                binary_instructions |= Register::R3 as u16;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        output_file
+                            .write(binary_instructions.to_be_bytes().as_slice())
+                            .unwrap();
+                    }
+                    "SUB" => {
+                        let (_, args) = line.split_once(char::is_whitespace).unwrap();
+                        let (arg1, arg2) = args.split_once(", ").unwrap();
+                        let mut binary_instructions = (OpCode::SUB as u16) << 12;
+
+                        match arg1 {
+                            "R0" => {
+                                binary_instructions |= (Register::R0 as u16) << 8;
+                            }
+                            "R1" => {
+                                binary_instructions |= (Register::R1 as u16) << 8;
+                            }
+                            "R2" => {
+                                binary_instructions |= (Register::R2 as u16) << 8;
+                            }
+                            "R3" => {
+                                binary_instructions |= (Register::R3 as u16) << 8;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        match arg2 {
+                            "R0" => {
+                                binary_instructions |= Register::R0 as u16;
+                            }
+                            "R1" => {
+                                binary_instructions |= Register::R1 as u16;
+                            }
+                            "R2" => {
+                                binary_instructions |= Register::R2 as u16;
+                            }
+                            "R3" => {
+                                binary_instructions |= Register::R3 as u16;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        output_file
+                            .write(binary_instructions.to_be_bytes().as_slice())
+                            .unwrap();
+                    }
+                    "JMP" => {
+                        let (_, arg) = line.split_once(char::is_whitespace).unwrap();
+                        let mut binary_instructions = (OpCode::JMP as u16) << 12;
+                        binary_instructions |= arg.to_string().parse::<u16>().unwrap();
+
+                        output_file
+                            .write(binary_instructions.to_be_bytes().as_slice())
+                            .unwrap();
+                    }
+                    "MOV" => {
+                        let (_, args) = line.split_once(char::is_whitespace).unwrap();
+                        let (arg1, arg2) = args.split_once(", ").unwrap();
+                        let mut binary_instructions = (OpCode::MOV as u16) << 12;
+
+                        match arg1 {
+                            "R0" => {
+                                binary_instructions |= (Register::R0 as u16) << 8;
+                            }
+                            "R1" => {
+                                binary_instructions |= (Register::R1 as u16) << 8;
+                            }
+                            "R2" => {
+                                binary_instructions |= (Register::R2 as u16) << 8;
+                            }
+                            "R3" => {
+                                binary_instructions |= (Register::R3 as u16) << 8;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        match arg2 {
+                            "R0" => {
+                                binary_instructions |= Register::R0 as u16;
+                            }
+                            "R1" => {
+                                binary_instructions |= Register::R1 as u16;
+                            }
+                            "R2" => {
+                                binary_instructions |= Register::R2 as u16;
+                            }
+                            "R3" => {
+                                binary_instructions |= Register::R3 as u16;
+                            }
+                            _ => {
+                                panic!("Unknown register {arg1}")
+                            }
+                        }
+
+                        output_file
+                            .write(binary_instructions.to_be_bytes().as_slice())
+                            .unwrap();
+                    }
                     _ => {
-                        println!("Unknown instruction {}", line)
+                        println!("Unknown instruction {line}")
                     }
                 }
             }
