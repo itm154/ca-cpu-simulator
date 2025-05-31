@@ -11,12 +11,14 @@ pub struct CPU {
 
 // NOTE: Placeholder opcodes for now
 enum OpCode {
-    LOAD = 0b0001,
-    STORE = 0b0010,
-    ADD = 0b0011,
-    SUB = 0b0100,
-    JMP = 0b0101,
     HALT = 0b0000,
+    LVAL = 0b0001,  // Load immediate
+    LOAD = 0b0011,  // Load from memory
+    STORE = 0b0100, // Store value of register to memory
+    ADD = 0b0101,
+    SUB = 0b0110,
+    JMP = 0b0111,
+    MOV = 0b1000, // Move register's value to another register
 }
 
 impl OpCode {
@@ -24,11 +26,13 @@ impl OpCode {
     pub fn u8_to_opcode(value: u8) -> Option<OpCode> {
         match value {
             0b0000 => Some(OpCode::HALT),
-            0b0001 => Some(OpCode::LOAD),
-            0b0010 => Some(OpCode::STORE),
-            0b0011 => Some(OpCode::ADD),
-            0b0100 => Some(OpCode::SUB),
-            0b0101 => Some(OpCode::JMP),
+            0b0001 => Some(OpCode::LVAL),
+            0b0011 => Some(OpCode::LOAD),
+            0b0100 => Some(OpCode::STORE),
+            0b0101 => Some(OpCode::ADD),
+            0b0110 => Some(OpCode::SUB),
+            0b0111 => Some(OpCode::JMP),
+            0b1000 => Some(OpCode::MOV),
             _ => None,
         }
     }
@@ -53,6 +57,26 @@ impl CPU {
         }
     }
 
+    fn get_register_mut(&mut self, index: u8) -> &mut u16 {
+        match index & 0b11 {
+            0b00 => &mut self.r0,
+            0b01 => &mut self.r1,
+            0b10 => &mut self.r2,
+            0b11 => &mut self.r3,
+            _ => unreachable!(),
+        }
+    }
+
+    fn get_register(&self, index: u8) -> u16 {
+        match index & 0b11 {
+            0b00 => self.r0,
+            0b01 => self.r1,
+            0b10 => self.r2,
+            0b11 => self.r3,
+            _ => unreachable!(),
+        }
+    }
+
     pub fn fetch(&mut self) {
         // Read at instruction at program counter
         self.ir = self.memory[self.pc as usize];
@@ -63,8 +87,9 @@ impl CPU {
         let instruction = self.ir;
 
         // black magic to extract bits from IR
-        // >> is bit shift
-        // & is bit mask (same princible as subnet mask in CCN)
+        // >> is bitwise shift
+        // & is bitwise AND (same princible as subnet mask in CCN)
+        // NOTE: https://www.tutorialspoint.com/rust/rust_bitwise_operators.htm
         let opcode = ((instruction >> 12) & 0b1111) as u8;
         let register = ((instruction >> 8) & 0b1111) as u8;
         let operand = (instruction & 0b1111_1111) as u8;
@@ -76,31 +101,66 @@ impl CPU {
         use OpCode::*;
 
         match OpCode::u8_to_opcode(opcode) {
-            // SOME and NONE
             // NOTE: https://stackoverflow.com/questions/24771655/what-are-some-and-none
             Some(HALT) => {
                 self.halted = true;
             }
-            Some(LOAD) => {}
 
-            Some(STORE) => {}
+            Some(LVAL) => {
+                *self.get_register_mut(register) = operand as u16;
+            }
 
-            Some(ADD) => {}
+            Some(LOAD) => {
+                *self.get_register_mut(register) = self.memory[operand as usize];
+            }
 
-            Some(SUB) => {}
+            Some(STORE) => {
+                let value = self.get_register(register);
+                //
+                // Store current value in register into memory
+                self.memory[operand as usize] = value;
+            }
 
-            Some(JMP) => {}
+            Some(ADD) => {
+                let dest = self.get_register(register);
+                let src = self.get_register(operand);
+                let dest_reg_mut = self.get_register_mut(register);
+                *dest_reg_mut = dest.wrapping_add(src);
+            }
+
+            Some(SUB) => {
+                let dest = self.get_register(register);
+                let src = self.get_register(operand);
+                let dest_reg_mut = self.get_register_mut(register);
+                *dest_reg_mut = dest.wrapping_sub(src);
+            }
+
+            Some(JMP) => {
+                self.pc = operand as u16;
+            }
+
+            Some(MOV) => {
+                let src = self.get_register(operand);
+                let dest = self.get_register_mut(register);
+                *dest = src;
+            }
+
             None => {
                 panic!("Unknown opcode {:#04b}", opcode)
             }
         }
     }
 
-    pub fn print() {}
+    pub fn print(&self) {
+        println!(
+            "PC: {} | IR: {:#018b} | R0: {} | R1: {} | R2: {} | R3: {} | Halted: {}",
+            self.pc, self.ir, self.r0, self.r1, self.r2, self.r3, self.halted
+        );
+    }
 }
 
 fn main() {
-    let program = [];
+    let program: Vec<u16> = vec![];
 
     let mut cpu = CPU::new(&program);
 
@@ -110,7 +170,7 @@ fn main() {
         cpu.execute(opcode, register, operand);
 
         // Print values of the registers after each cycle
-        // cpu.print();
+        cpu.print();
     }
 
     println!("CPU halted");
