@@ -289,7 +289,7 @@ fn main() {
                             .unwrap();
                     }
                     _ => {
-                        println!("Unknown instruction {line}")
+                        panic!("Unknown instruction {line}")
                     }
                 }
             }
