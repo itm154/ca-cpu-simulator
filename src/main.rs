@@ -1,5 +1,18 @@
-use std::fs;
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 
+use ratatui::{
+    DefaultTerminal, Frame,
+    buffer::Buffer,
+    layout::{Constraint, Direction, Layout, Rect},
+    style::Stylize,
+    symbols::border,
+    text::{Line, Text},
+    widgets::{Block, ListItem, Paragraph, Widget},
+};
+
+use std::{default, fs, io};
+
+#[derive(Debug)]
 pub struct CPU {
     r0: u16,           // General purpose register
     r1: u16,           // following RISC naming convention (R[n])
@@ -11,7 +24,22 @@ pub struct CPU {
     halted: bool,      // For HALT opcode
 }
 
-// NOTE: Placeholder opcodes for now
+impl Default for CPU {
+    fn default() -> Self {
+        CPU {
+            r0: 0,
+            r1: 0,
+            r2: 0,
+            r3: 0,
+            pc: 0,
+            ir: 0,
+            memory: [0; 64],
+            halted: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 enum OpCode {
     HALT = 0b0000,
     LVAL = 0b0001, // Load immediate
@@ -152,37 +180,83 @@ impl CPU {
             }
         }
     }
+}
 
-    pub fn print(&self) {
-        println!(
-            "PC: {} | IR: {:#018b} | R0: {} | R1: {} | R2: {} | R3: {} | Halted: {}",
-            self.pc, self.ir, self.r0, self.r1, self.r2, self.r3, self.halted
-        );
-        // for i in 0..self.memory.len() {
-        //     println!("{i} = {}", self.memory[i as usize])
-        // }
+// TUI Implementation
+#[derive(Default)]
+pub struct App {
+    cpu: CPU,
+    logs: Vec<String>,
+    exit: bool,
+}
+
+impl App {
+    pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
+        while !self.exit {
+            terminal.draw(|frame| self.draw(frame))?;
+            self.handle_events()?;
+        }
+        Ok(())
+    }
+
+    fn draw(&self, frame: &mut Frame) {
+        frame.render_widget(self, frame.area());
+    }
+
+    fn handle_events(&mut self) -> io::Result<()> {
+        match event::read()? {
+            // it's important to check that the event is a key press event as
+            // crossterm also emits key release and repeat events on Windows.
+            Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
+                self.handle_key_event(key_event)
+            }
+            _ => {}
+        };
+        Ok(())
+    }
+
+    fn handle_key_event(&mut self, key_event: KeyEvent) {
+        match key_event.code {
+            KeyCode::Char('q') => self.exit(),
+            _ => {}
+        }
+    }
+
+    fn exit(&mut self) {
+        self.exit = true;
     }
 }
 
-fn main() {
-    let program_bin = fs::read("program.bin").unwrap();
+impl Widget for &App {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        let layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
+            .split(area);
 
-    let mut program: Vec<u16> = Vec::new();
+        let memory_layout = layout[0];
+        let log_layout = layout[1];
 
-    for chunk in program_bin.chunks_exact(2) {
-        program.push(u16::from_le_bytes([chunk[1], chunk[0]]));
+        // let memory_item: Vec<ListItem> =
     }
+}
 
-    let mut cpu = CPU::new(&program);
+fn main() -> io::Result<()> {
+    let mut terminal = ratatui::init();
 
-    while !cpu.halted {
-        cpu.fetch();
-        let (opcode, register, operand) = cpu.decode();
-        cpu.execute(opcode, register, operand);
+    let program_bin = fs::read("program.bin").unwrap_or_default();
 
-        // Print values of the registers after each cycle
-        cpu.print();
-    }
+    let program: Vec<u16> = program_bin
+        .chunks_exact(2)
+        .map(|chunk| u16::from_le_bytes([chunk[1], chunk[0]]))
+        .collect();
 
-    println!("CPU halted");
+    let mut app = App {
+        cpu: CPU::new(&program),
+        ..Default::default()
+    };
+
+    let app_result = app.run(&mut terminal);
+    ratatui::restore();
+    app_result
 }

@@ -4,10 +4,6 @@ version = "0.1.0"
 edition = "2024"
 default-run = "cpu-sim"
 
-[dependencies]
-crossterm = "0.29.0"
-ratatui = "0.29.0"
-
 [[bin]]
 name = "cpu-sim"
 path = "src/main.rs"
@@ -15,3 +11,7 @@ path = "src/main.rs"
 [[bin]]
 name = "assembler"
 path = "src/assembler.rs"
+
+[dependencies]
+crossterm = "0.29.0"
+ratatui = "0.29.0"
