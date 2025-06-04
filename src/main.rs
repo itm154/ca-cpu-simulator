@@ -158,6 +158,9 @@ impl CPU {
             "PC: {} | IR: {:#018b} | R0: {} | R1: {} | R2: {} | R3: {} | Halted: {}",
             self.pc, self.ir, self.r0, self.r1, self.r2, self.r3, self.halted
         );
+        // for i in 0..self.memory.len() {
+        //     println!("{i} = {}", self.memory[i as usize])
+        // }
     }
 }
 
