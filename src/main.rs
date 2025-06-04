@@ -7,37 +7,10 @@ use ratatui::{
     style::Stylize,
     symbols::border,
     text::{Line, Text},
-    widgets::{Block, ListItem, Paragraph, Widget},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Widget},
 };
 
-use std::{default, fs, io};
-
-#[derive(Debug)]
-pub struct CPU {
-    r0: u16,           // General purpose register
-    r1: u16,           // following RISC naming convention (R[n])
-    r2: u16,           // probably dont need this many
-    r3: u16,           // registers but why not
-    pc: u16,           // Program counter
-    ir: u16,           // Instruction register
-    memory: [u16; 64], // 64 bytes of memory
-    halted: bool,      // For HALT opcode
-}
-
-impl Default for CPU {
-    fn default() -> Self {
-        CPU {
-            r0: 0,
-            r1: 0,
-            r2: 0,
-            r3: 0,
-            pc: 0,
-            ir: 0,
-            memory: [0; 64],
-            halted: false,
-        }
-    }
-}
+use std::{fs, io};
 
 #[derive(Debug, Clone, Copy)]
 enum OpCode {
@@ -64,6 +37,33 @@ impl OpCode {
             0b0111 => Some(OpCode::JMP),
             0b1000 => Some(OpCode::MOV),
             _ => None,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct CPU {
+    r0: u16,           // General purpose register
+    r1: u16,           // following RISC naming convention (R[n])
+    r2: u16,           // probably dont need this many
+    r3: u16,           // registers but why not
+    pc: u16,           // Program counter
+    ir: u16,           // Instruction register
+    memory: [u16; 64], // 64 bytes of memory
+    halted: bool,      // For HALT opcode
+}
+
+impl Default for CPU {
+    fn default() -> Self {
+        CPU {
+            r0: 0,
+            r1: 0,
+            r2: 0,
+            r3: 0,
+            pc: 0,
+            ir: 0,
+            memory: [0; 64],
+            halted: false,
         }
     }
 }
@@ -182,11 +182,13 @@ impl CPU {
     }
 }
 
-// TUI Implementation
+// NOTE:
+// ------ TUI Implementation ------
 #[derive(Default)]
 pub struct App {
     cpu: CPU,
     logs: Vec<String>,
+    memory_list_state: ListState,
     exit: bool,
 }
 
@@ -199,8 +201,40 @@ impl App {
         Ok(())
     }
 
-    fn draw(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.area());
+    fn draw(&mut self, frame: &mut Frame) {
+        let outer_layout = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints(vec![Constraint::Percentage(30), Constraint::Percentage(70)])
+            .split(frame.area());
+
+        let inner_layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(vec![Constraint::Percentage(80), Constraint::Percentage(20)])
+            .split(outer_layout[0]);
+
+        let register = Block::new().borders(Borders::ALL).title("Registers");
+        let cpu = Block::new().borders(Borders::ALL).title("CPU");
+
+        let memory_items: Vec<ListItem> = self
+            .cpu
+            .memory
+            .iter()
+            .enumerate()
+            .map(|(i, &val)| ListItem::new(format!("{:2}: {:018b} ({:5})", i, val, val)))
+            .collect();
+
+        let memory_list_widget = List::new(memory_items)
+            .block(Block::default().borders(Borders::ALL).title("Memory view"))
+            .highlight_symbol("> ");
+
+        frame.render_stateful_widget(
+            memory_list_widget,
+            inner_layout[0],
+            &mut self.memory_list_state,
+        );
+
+        frame.render_widget(register, inner_layout[1]);
+        frame.render_widget(cpu, outer_layout[1]);
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
@@ -228,17 +262,7 @@ impl App {
 }
 
 impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let layout = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(30), Constraint::Percentage(70)].as_ref())
-            .split(area);
-
-        let memory_layout = layout[0];
-        let log_layout = layout[1];
-
-        // let memory_item: Vec<ListItem> =
-    }
+    fn render(self, area: Rect, buf: &mut Buffer) {}
 }
 
 fn main() -> io::Result<()> {
