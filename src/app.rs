@@ -3,20 +3,16 @@ use crate::cpu::CPU;
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
     DefaultTerminal, Frame,
-    buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
-    style::{Modifier, Style, Stylize},
-    text::{Line, Text},
-    widgets::{Block, Borders, List, ListItem, ListState, Paragraph, Widget},
+    layout::{Constraint, Direction, Layout},
+    style::{Modifier, Style},
+    widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
 };
 
 use std::io;
 
 pub struct App {
     pub cpu: CPU,
-    pub logs: Vec<String>,
     pub memory_list_state: ListState,
-    pub instruction_list_state: ListState,
     pub exit: bool,
     pub step_mode: bool,
 }
@@ -24,10 +20,8 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         Self {
-            cpu: CPU::default(), // Assuming CPU has a default implementation
-            logs: Vec::new(),
+            cpu: CPU::default(),
             memory_list_state: ListState::default(),
-            instruction_list_state: ListState::default(),
             exit: false,
             step_mode: true, // Start in step mode by default, or false for auto-run
         }
@@ -47,6 +41,9 @@ impl App {
                 break;
             }
 
+            // NOTE:
+            // Non step mode operation
+            // Step mode is defined in handle_key_event
             if !self.cpu.halted && !self.step_mode {
                 self.cpu.fetch();
                 let (opcode, register, operand) = self.cpu.decode();
@@ -81,16 +78,10 @@ impl App {
         );
 
         // == CPU status widget ==
-        let cpu_pane_layout = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints(vec![Constraint::Percentage(60), Constraint::Percentage(40)])
-            .split(main_layout[1]);
-
         let registers = self.cpu.get_all_registers();
         let cpu_status_text = format!(
-            "PC: {} (Location in memory -> {})\nIR: {:016b}\n\nR0: {}\nR1: {}\nR2: {}\nR3: {}\n\nHalted: {}",
+            "PC: {} \nIR: {:016b}\n\nR0: {}\nR1: {}\nR2: {}\nR3: {} \n\nHalted: {}",
             self.cpu.pc,
-            self.cpu.pc.wrapping_sub(1),
             self.cpu.ir,
             registers[0],
             registers[1],
@@ -103,11 +94,12 @@ impl App {
             .block(Block::default().borders(Borders::ALL).title("CPU Status"))
             .wrap(ratatui::widgets::Wrap { trim: false });
 
-        frame.render_widget(cpu_status_paragraph, cpu_pane_layout[1]);
+        frame.render_widget(cpu_status_paragraph, main_layout[1]);
         // =+= CPU status widget =+=
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
+        // Poll to prevent blocking
         if event::poll(std::time::Duration::from_millis(50))? {
             if let Event::Key(key_event) = event::read()? {
                 if key_event.kind == KeyEventKind::Press {
@@ -124,22 +116,18 @@ impl App {
             KeyCode::Up => self.scroll_memory_up(),
             KeyCode::Down => self.scroll_memory_down(),
             KeyCode::Enter => {
-                // <--- New: Handle Enter key
+                // NOTE: CPU Cycle
                 if self.step_mode && !self.cpu.halted {
-                    // Perform one CPU cycle
                     self.cpu.fetch();
                     let (opcode, register, operand) = self.cpu.decode();
                     self.cpu.execute(opcode, register, operand);
                 }
+                self.memory_list_state
+                    .select(Some(self.cpu.pc.saturating_sub(1) as usize)); // Highlight current
+                // instruction in memory
             }
             KeyCode::Char('t') => {
-                // Optional: Toggle step mode vs auto-run
                 self.step_mode = !self.step_mode;
-                // Optionally log mode change
-                self.logs.push(format!(
-                    "Toggled step mode: {}",
-                    if self.step_mode { "ON" } else { "OFF" }
-                ));
             }
             _ => {}
         }
@@ -149,12 +137,12 @@ impl App {
         let i = match self.memory_list_state.selected() {
             Some(selected) => {
                 if selected == 0 {
-                    self.cpu.memory.len() - 1 // Wrap around to the end
+                    self.cpu.memory.len() - 1 // wrap to the end
                 } else {
                     selected - 1
                 }
             }
-            None => 0, // If nothing is selected, select the first item
+            None => 0,
         };
         self.memory_list_state.select(Some(i));
     }
@@ -163,12 +151,12 @@ impl App {
         let i = match self.memory_list_state.selected() {
             Some(selected) => {
                 if selected >= self.cpu.memory.len() - 1 {
-                    0 // Wrap around to the beginning
+                    0 // wrap to beginning
                 } else {
                     selected + 1
                 }
             }
-            None => 0, // If nothing is selected, select the first item
+            None => 0,
         };
         self.memory_list_state.select(Some(i));
     }
