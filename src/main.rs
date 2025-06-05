@@ -29,12 +29,12 @@ impl OpCode {
         match value {
             0b0000 => Some(OpCode::HALT),
             0b0001 => Some(OpCode::LVAL),
-            0b0011 => Some(OpCode::LOAD),
-            0b0100 => Some(OpCode::STORE),
-            0b0101 => Some(OpCode::ADD),
-            0b0110 => Some(OpCode::SUB),
-            0b0111 => Some(OpCode::JMP),
-            0b1000 => Some(OpCode::MOV),
+            0b0010 => Some(OpCode::LOAD),
+            0b0011 => Some(OpCode::STORE),
+            0b0100 => Some(OpCode::ADD),
+            0b0101 => Some(OpCode::SUB),
+            0b0110 => Some(OpCode::JMP),
+            0b0111 => Some(OpCode::MOV),
             _ => None,
         }
     }

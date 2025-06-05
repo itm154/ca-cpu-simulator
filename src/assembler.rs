@@ -3,13 +3,13 @@ use std::io::{Read, Write};
 
 enum OpCode {
     HALT = 0b0000,
-    LVAL = 0b0001,  // Load immediate value into register
-    LOAD = 0b0011,  // Load value from memory into register
-    STORE = 0b0100, // Store value of register to memory
-    ADD = 0b0101,
-    SUB = 0b0110,
-    JMP = 0b0111,
-    MOV = 0b1000, // Move register's value to another register
+    LVAL = 0b0001, // Load immediate value into register
+    LOAD = 0b0010, // Load value from memory into register
+    STORE = 0b011, // Store value of register to memory
+    ADD = 0b0100,
+    SUB = 0b0101,
+    JMP = 0b0110,
+    MOV = 0b0111, // Move register's value to another register
 }
 
 enum Register {
