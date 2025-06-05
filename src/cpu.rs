@@ -32,10 +32,36 @@ pub struct CPU {
     r1: u16,
     r2: u16,
     r3: u16,
-    pc: u16,
-    ir: u16,
+    pub pc: u16,
+    pub ir: u16,
     pub memory: [u16; 64],
     pub halted: bool,
+    pub last_decoded_instruction: Option<DecodedInstruction>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DecodedInstruction {
+    pub opcode: OpCode,
+    pub register: u8,
+    pub operand: u8,
+}
+
+impl std::fmt::Display for DecodedInstruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.opcode {
+            OpCode::LVAL | OpCode::LOAD | OpCode::STORE | OpCode::JMP => {
+                write!(
+                    f,
+                    "{:?} R{} ${:02X}",
+                    self.opcode, self.register, self.operand
+                )
+            }
+            OpCode::ADD | OpCode::SUB | OpCode::MOV => {
+                write!(f, "{:?} R{} R{}", self.opcode, self.register, self.operand)
+            }
+            OpCode::HALT => write!(f, "{:?}", self.opcode),
+        }
+    }
 }
 
 impl Default for CPU {
@@ -49,6 +75,7 @@ impl Default for CPU {
             ir: 0,
             memory: [0; 64],
             halted: false,
+            last_decoded_instruction: None,
         }
     }
 }
@@ -76,31 +103,65 @@ impl CPU {
     }
 
     pub fn execute(&mut self, opcode: u8, register: u8, operand: u8) {
+        let opcode = OpCode::u8_to_opcode(opcode)
+            .unwrap_or_else(|| panic!("Unknown opcode: {:#04b}", opcode));
+
+        // Store the instruction *before* execution, so you capture what was just executed.
+        self.last_decoded_instruction = Some(DecodedInstruction {
+            opcode,
+            register,
+            operand,
+        });
+
         use OpCode::*;
-        match OpCode::u8_to_opcode(opcode) {
-            Some(HALT) => self.halted = true,
-            Some(LVAL) => *self.get_register_mut(register) = operand as u16,
-            Some(LOAD) => *self.get_register_mut(register) = self.memory[operand as usize],
-            Some(STORE) => self.memory[operand as usize] = self.get_register(register),
-            Some(ADD) => {
-                let result = self
-                    .get_register(register)
-                    .wrapping_add(self.get_register(operand));
-                *self.get_register_mut(register) = result;
+        match opcode {
+            // NOTE: https://stackoverflow.com/questions/24771655/what-are-some-and-none
+            HALT => {
+                self.halted = true;
             }
-            Some(SUB) => {
-                let result = self
-                    .get_register(register)
-                    .wrapping_sub(self.get_register(operand));
-                *self.get_register_mut(register) = result;
+
+            LVAL => {
+                *self.get_register_mut(register) = operand as u16;
             }
-            Some(JMP) => self.pc = operand as u16,
-            Some(MOV) => *self.get_register_mut(register) = self.get_register(operand),
-            None => panic!("Unknown opcode: {:#04b}", opcode),
+
+            LOAD => {
+                *self.get_register_mut(register) = self.memory[operand as usize];
+            }
+
+            STORE => {
+                let value = self.get_register(register);
+
+                // Store current value in register into memory
+                self.memory[operand as usize] = value;
+            }
+
+            ADD => {
+                let dest = self.get_register(register);
+                let src = self.get_register(operand);
+                let dest_reg_mut = self.get_register_mut(register);
+                *dest_reg_mut = dest.wrapping_add(src);
+            }
+
+            SUB => {
+                let dest = self.get_register(register);
+                let src = self.get_register(operand);
+                let dest_reg_mut = self.get_register_mut(register);
+                *dest_reg_mut = dest.wrapping_sub(src);
+            }
+
+            JMP => {
+                self.pc = operand as u16;
+            }
+
+            MOV => {
+                let src = self.get_register(operand);
+                let dest = self.get_register_mut(register);
+                *dest = src;
+            }
         }
     }
 
-    fn get_register(&self, index: u8) -> u16 {
+    pub fn get_register(&self, index: u8) -> u16 {
         match index & 0b11 {
             0b00 => self.r0,
             0b01 => self.r1,
@@ -110,7 +171,7 @@ impl CPU {
         }
     }
 
-    fn get_register_mut(&mut self, index: u8) -> &mut u16 {
+    pub fn get_register_mut(&mut self, index: u8) -> &mut u16 {
         match index & 0b11 {
             0b00 => &mut self.r0,
             0b01 => &mut self.r1,
@@ -118,5 +179,9 @@ impl CPU {
             0b11 => &mut self.r3,
             _ => unreachable!(),
         }
+    }
+
+    pub fn get_all_registers(&self) -> [u16; 4] {
+        [self.r0, self.r1, self.r2, self.r3]
     }
 }
