@@ -175,4 +175,11 @@ impl CPU {
     pub fn get_all_registers(&self) -> [u16; 4] {
         [self.r0, self.r1, self.r2, self.r3]
     }
+
+    pub fn log_registers(&self) -> String {
+        format!(
+            " {:2} │ {:4} │ {:4} │ {:4} │ {:4} ",
+            self.pc, self.r0, self.r1, self.r2, self.r3,
+        )
+    }
 }

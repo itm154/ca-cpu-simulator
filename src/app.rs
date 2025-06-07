@@ -13,8 +13,10 @@ use std::io;
 pub struct App {
     pub cpu: CPU,
     pub memory_list_state: ListState,
-    pub exit: bool,
+    pub register_logs: Vec<String>,
+    pub register_logs_list_state: ListState,
     pub step_mode: bool,
+    pub exit: bool,
 }
 
 impl Default for App {
@@ -22,6 +24,8 @@ impl Default for App {
         Self {
             cpu: CPU::default(),
             memory_list_state: ListState::default(),
+            register_logs: Vec::default(),
+            register_logs_list_state: ListState::default(),
             exit: false,
             step_mode: true, // Start in step mode by default, or false for auto-run
         }
@@ -48,6 +52,7 @@ impl App {
                 self.cpu.fetch();
                 let (opcode, register, operand) = self.cpu.decode();
                 self.cpu.execute(opcode, register, operand);
+                self.register_logs.push(self.cpu.log_registers());
             }
         }
         Ok(())
@@ -56,7 +61,11 @@ impl App {
     fn draw(&mut self, frame: &mut Frame) {
         let main_layout = Layout::default()
             .direction(Direction::Horizontal)
-            .constraints(vec![Constraint::Length(33), Constraint::Fill(1)])
+            .constraints(vec![
+                Constraint::Length(33),
+                Constraint::Fill(1),
+                Constraint::Length(34),
+            ])
             .split(frame.area());
 
         let memory_items: Vec<ListItem> = self
@@ -96,6 +105,29 @@ impl App {
 
         frame.render_widget(cpu_status_paragraph, main_layout[1]);
         // =+= CPU status widget =+=
+
+        // == Register Logs widget ==
+        let register_logs_item: Vec<ListItem> = self
+            .register_logs
+            .iter()
+            .enumerate()
+            .map(|(_, log)| ListItem::new(log.clone()))
+            .collect();
+
+        let register_logs_widget = List::new(register_logs_item)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Register Logs"),
+            )
+            .highlight_style(Style::default().add_modifier(Modifier::REVERSED));
+
+        frame.render_stateful_widget(
+            register_logs_widget,
+            main_layout[2],
+            &mut self.register_logs_list_state,
+        );
+        // =+= Register Logs widget =+=
     }
 
     fn handle_events(&mut self) -> io::Result<()> {
