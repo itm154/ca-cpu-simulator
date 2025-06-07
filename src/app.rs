@@ -47,7 +47,7 @@ impl App {
                 break;
             }
 
-            // NOTE:
+            // NOTE: Operation type
             // Non step mode operation
             // Step mode is defined in handle_key_event
             if !self.cpu.halted && !self.step_mode {
@@ -63,6 +63,7 @@ impl App {
     }
 
     fn draw(&mut self, frame: &mut Frame) {
+        // Define layout in terminal (3 Horizontally split panes)
         let main_layout = Layout::default()
             .direction(Direction::Horizontal)
             .constraints(vec![
@@ -72,6 +73,7 @@ impl App {
             ])
             .split(frame.area());
 
+        // == Memory List widget ==
         let memory_items: Vec<ListItem> = self
             .cpu
             .memory
@@ -89,6 +91,7 @@ impl App {
             main_layout[0],
             &mut self.memory_list_state,
         );
+        // =+= Memory List widget =+=
 
         // == CPU status widget ==
         let registers = self.cpu.get_all_registers();
@@ -148,27 +151,28 @@ impl App {
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
+            KeyCode::Enter => self.step(),
             KeyCode::Char('q') => self.exit = true,
+            KeyCode::Char('r') => self.reset_cpu(),
             KeyCode::Up => self.scroll_memory_up(),
             KeyCode::Down => self.scroll_memory_down(),
-            KeyCode::Char('r') => self.reset_cpu(),
-            KeyCode::Enter => {
-                // NOTE: CPU Cycle
-                if self.step_mode && !self.cpu.halted {
-                    self.cpu.fetch();
-                    let (opcode, register, operand) = self.cpu.decode();
-                    self.cpu.execute(opcode, register, operand);
-                    self.register_logs.push(self.cpu.log_registers());
-                }
-                self.memory_list_state
-                    .select(Some(self.cpu.pc.saturating_sub(1) as usize)); // Highlight current
-                // instruction in memory
-            }
             KeyCode::Char('t') => {
-                self.step_mode = !self.step_mode;
+                self.step_mode = !self.step_mode; // Toggle
             }
             _ => {}
         }
+    }
+
+    fn step(&mut self) {
+        if self.step_mode && !self.cpu.halted {
+            self.cpu.fetch();
+            let (opcode, register, operand) = self.cpu.decode();
+            self.cpu.execute(opcode, register, operand);
+            self.register_logs.push(self.cpu.log_registers());
+        }
+        self.memory_list_state
+            .select(Some(self.cpu.pc.saturating_sub(1) as usize)); // Highlight current
+        // instruction in memory
     }
 
     fn reset_cpu(&mut self) {
