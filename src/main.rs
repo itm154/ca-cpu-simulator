@@ -18,6 +18,7 @@ fn main() -> io::Result<()> {
 
     let mut app = App {
         cpu: CPU::new(&program),
+        program,
         ..Default::default()
     };
 

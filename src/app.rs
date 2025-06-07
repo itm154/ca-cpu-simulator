@@ -12,6 +12,7 @@ use std::io;
 
 pub struct App {
     pub cpu: CPU,
+    pub program: Vec<u16>,
     pub memory_list_state: ListState,
     pub register_logs: Vec<String>,
     pub register_logs_list_state: ListState,
@@ -23,11 +24,12 @@ impl Default for App {
     fn default() -> Self {
         Self {
             cpu: CPU::default(),
+            program: Vec::default(),
             memory_list_state: ListState::default(),
             register_logs: Vec::default(),
             register_logs_list_state: ListState::default(),
             exit: false,
-            step_mode: true, // Start in step mode by default, or false for auto-run
+            step_mode: true, // Start in step mode by default
         }
     }
 }
@@ -53,6 +55,8 @@ impl App {
                 let (opcode, register, operand) = self.cpu.decode();
                 self.cpu.execute(opcode, register, operand);
                 self.register_logs.push(self.cpu.log_registers());
+                self.memory_list_state
+                    .select(Some(self.cpu.pc.saturating_sub(1) as usize)); // Highlight current
             }
         }
         Ok(())
@@ -147,12 +151,14 @@ impl App {
             KeyCode::Char('q') => self.exit = true,
             KeyCode::Up => self.scroll_memory_up(),
             KeyCode::Down => self.scroll_memory_down(),
+            KeyCode::Char('r') => self.reset_cpu(),
             KeyCode::Enter => {
                 // NOTE: CPU Cycle
                 if self.step_mode && !self.cpu.halted {
                     self.cpu.fetch();
                     let (opcode, register, operand) = self.cpu.decode();
                     self.cpu.execute(opcode, register, operand);
+                    self.register_logs.push(self.cpu.log_registers());
                 }
                 self.memory_list_state
                     .select(Some(self.cpu.pc.saturating_sub(1) as usize)); // Highlight current
@@ -163,6 +169,15 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    fn reset_cpu(&mut self) {
+        self.cpu.halted = false;
+        self.cpu.pc = 0;
+        self.register_logs.clear();
+        self.cpu.memory = [0u16; 64];
+        self.memory_list_state = ListState::default();
+        self.cpu = CPU::new(&self.program);
     }
 
     fn scroll_memory_up(&mut self) {
