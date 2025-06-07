@@ -18,6 +18,15 @@ Run the cpu simulator
 $ cargo run
 ```
 
+### Keymapping
+
+| Key     | Function            |
+| ------- | ------------------- |
+| `Enter` | Execute (Step Mode) |
+| `t`     | Switch mode         |
+| `r`     | Reset CPU           |
+| `q`     | Quit                |
+
 ### CPU Instructions
 
 #### Format
