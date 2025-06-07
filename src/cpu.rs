@@ -36,7 +36,6 @@ pub struct CPU {
     pub ir: u16,
     pub memory: [u16; 64],
     pub halted: bool,
-    pub last_decoded_instruction: Option<DecodedInstruction>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -75,7 +74,6 @@ impl Default for CPU {
             ir: 0,
             memory: [0; 64],
             halted: false,
-            last_decoded_instruction: None,
         }
     }
 }
@@ -105,13 +103,6 @@ impl CPU {
     pub fn execute(&mut self, opcode: u8, register: u8, operand: u8) {
         let opcode = OpCode::u8_to_opcode(opcode)
             .unwrap_or_else(|| panic!("Unknown opcode: {:#04b}", opcode));
-
-        // Store the instruction *before* execution, so you capture what was just executed.
-        self.last_decoded_instruction = Some(DecodedInstruction {
-            opcode,
-            register,
-            operand,
-        });
 
         use OpCode::*;
         match opcode {
