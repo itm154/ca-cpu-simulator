@@ -1,3 +1,4 @@
+// NOTE: OpCode Definition
 #[derive(Debug, Clone, Copy)]
 pub enum OpCode {
     HALT = 0b0000,
@@ -11,6 +12,7 @@ pub enum OpCode {
 }
 
 impl OpCode {
+    // Helper function to decoded value to corresponding OpCode
     pub fn u8_to_opcode(value: u8) -> Option<OpCode> {
         match value {
             0b0000 => Some(OpCode::HALT),
@@ -26,7 +28,7 @@ impl OpCode {
     }
 }
 
-#[derive(Debug)]
+// NOTE: CPU Definition
 pub struct CPU {
     r0: u16,
     r1: u16,
@@ -36,31 +38,6 @@ pub struct CPU {
     pub ir: u16,
     pub memory: [u16; 64],
     pub halted: bool,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct DecodedInstruction {
-    pub opcode: OpCode,
-    pub register: u8,
-    pub operand: u8,
-}
-
-impl std::fmt::Display for DecodedInstruction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.opcode {
-            OpCode::LVAL | OpCode::LOAD | OpCode::STORE | OpCode::JMP => {
-                write!(
-                    f,
-                    "{:?} R{} ${:02X}",
-                    self.opcode, self.register, self.operand
-                )
-            }
-            OpCode::ADD | OpCode::SUB | OpCode::MOV => {
-                write!(f, "{:?} R{} R{}", self.opcode, self.register, self.operand)
-            }
-            OpCode::HALT => write!(f, "{:?}", self.opcode),
-        }
-    }
 }
 
 impl Default for CPU {
@@ -79,6 +56,7 @@ impl Default for CPU {
 }
 
 impl CPU {
+    // Erases memory and load program
     pub fn new(program: &[u16]) -> Self {
         let mut memory = [0u16; 64];
         memory[..program.len()].copy_from_slice(program);
@@ -88,11 +66,13 @@ impl CPU {
         }
     }
 
+    // NOTE: Fetch
     pub fn fetch(&mut self) {
         self.ir = self.memory[self.pc as usize];
         self.pc = self.pc.wrapping_add(1);
     }
 
+    // NOTE: Decode
     pub fn decode(&self) -> (u8, u8, u8) {
         let opcode = ((self.ir >> 12) & 0b1111) as u8;
         let register = ((self.ir >> 8) & 0b1111) as u8;
@@ -100,22 +80,24 @@ impl CPU {
         (opcode, register, operand)
     }
 
+    // NOTE: Execute
     pub fn execute(&mut self, opcode: u8, register: u8, operand: u8) {
         let opcode = OpCode::u8_to_opcode(opcode)
             .unwrap_or_else(|| panic!("Unknown opcode: {:#04b}", opcode));
 
         use OpCode::*;
         match opcode {
-            // NOTE: https://stackoverflow.com/questions/24771655/what-are-some-and-none
             HALT => {
                 self.halted = true;
             }
 
             LVAL => {
+                // Load value from immediate (argument)
                 *self.get_register_mut(register) = operand as u16;
             }
 
             LOAD => {
+                // Load value from memory[i]
                 *self.get_register_mut(register) = self.memory[operand as usize];
             }
 
@@ -126,6 +108,8 @@ impl CPU {
                 self.memory[operand as usize] = value;
             }
 
+            // NOTE: For ADD and SUB
+            // wrapping_add/sub prevents integer overflow
             ADD => {
                 let dest = self.get_register(register);
                 let src = self.get_register(operand);
@@ -145,6 +129,7 @@ impl CPU {
             }
 
             MOV => {
+                // This is technically copy lol
                 let src = self.get_register(operand);
                 let dest = self.get_register_mut(register);
                 *dest = src;
@@ -152,6 +137,7 @@ impl CPU {
         }
     }
 
+    // More helper functions
     pub fn get_register(&self, index: u8) -> u16 {
         match index & 0b11 {
             0b00 => self.r0,
@@ -172,6 +158,7 @@ impl CPU {
         }
     }
 
+    // Helper functions for TUI specifically
     pub fn get_all_registers(&self) -> [u16; 4] {
         [self.r0, self.r1, self.r2, self.r3]
     }
