@@ -1,5 +1,9 @@
 # CPU Simulator built in Rust
 
+### Description
+
+16-bit CPU Simulator written for Computer Architecture course project.
+
 ### Prerequisites
 
 - Rust and `cargo` [(Install)](https://www.rust-lang.org/learn/get-started)
@@ -76,5 +80,7 @@ Example: LVAL R2, 2 -> `0001 0020 00000010`
   reference and inspiration
 - [Emulating a CPU in C++](https://www.youtube.com/watch?v=qJgsuQoy9bc) by Dave
   Poo
+- [The Fetch-Excute Cycle: What's Your Computer Actually Doing](https://www.youtube.com/watch?v=Z5JC9Ve1sfI)
+  by Tom Scott
 - [Rust for the Impatient](https://www.youtube.com/watch?v=br3GIIQeefY) by No
   Boilerplate
